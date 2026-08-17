@@ -1549,6 +1549,13 @@ def suggest_nofo_cover(nofo_theme):
     return "nofo--cover-page--medium"
 
 
+def suggest_nofo_before_you_begin(nofo_group):
+    if nofo_group == "nih":
+        return "era"
+
+    return "full"
+
+
 def suggest_nofo_theme(nofo_number):
     if "cdc-" in nofo_number.lower():
         return "portrait-cdc-blue"
@@ -1668,6 +1675,10 @@ def suggest_all_nofo_fields(nofo, soup):
         nofo.theme = suggest_nofo_theme(nofo.number)  # guess the NOFO theme
     if first_time_import:
         nofo.cover = suggest_nofo_cover(nofo.theme)  # guess the NOFO cover
+    if first_time_import:
+        nofo.before_you_begin = suggest_nofo_before_you_begin(
+            nofo.group
+        )  # guess the NOFO "Before you begin" page
 
 
 ###########################################################
