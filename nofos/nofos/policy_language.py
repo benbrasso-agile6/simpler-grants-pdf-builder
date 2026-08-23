@@ -298,18 +298,65 @@ def get_policy_language_export_note(subsection):
     )
 
 
+def refresh_policy_language_tags(nofo):
+    """
+    Recompute policy_language_status/policy_language_slot fresh, in memory
+    only - never persisted back to the database - for every subsection in
+    this NOFO, against its current name/body and the current canonical slot
+    set.
+
+    Import-time tagging (in _build_document) writes these fields exactly
+    once, at import, and nothing else in Builder ever touches them again:
+    not a regular subsection edit, not duplicate_nofo() (which copies the
+    stored value verbatim via model_to_dict rather than recomputing it),
+    and not a later revision to the canonical slot data itself (re-running
+    ingest_canonical_policy_language). Any of those leaves the stored
+    column stale relative to what's actually true right now.
+
+    The clearance export is the one place that can't tolerate that: a
+    stale "intact" on since-altered content means silently stripping
+    exactly the kind of drift this feature exists to catch. So the export
+    view calls this first and renders from the refreshed in-memory values -
+    the stored column is left untouched, still meaning "status as of last
+    import," which may be useful elsewhere (e.g. admin visibility) but is
+    no longer what export relies on.
+
+    Callers must prefetch_related_objects(nofo, "sections__subsections")
+    (a plain, unfiltered prefetch) before calling this, so the mutations
+    land on the same Section/Subsection instances everything else in that
+    request - the export template, get_policy_language_export_summary -
+    will go on to read via nofo.sections.all() / section.subsections.all().
+    """
+    candidate_slots = get_candidate_slots()
+    for section in nofo.sections.all():
+        for subsection in section.subsections.all():
+            status, slot = detect_policy_language_status(
+                subsection.name, subsection.body, candidate_slots=candidate_slots
+            )
+            subsection.policy_language_status = status
+            subsection.policy_language_slot = slot
+
+
 def get_missing_required_slots(nofo):
     """
     Required slots with no matching subsection anywhere in this NOFO. This is
     a Nofo-level fact, not a per-Subsection one - deliberately not stored on
-    Subsection.policy_language_status (see that field's help_text). Intended
-    for use at export time (a later phase), not computed here at import time.
+    Subsection.policy_language_status (see that field's help_text).
+
+    Reads policy_language_slot_id off nofo.sections.all()/
+    section.subsections.all() (bare .all(), no extra filtering) rather than
+    a fresh values_list() query, so that when refresh_policy_language_tags()
+    has already mutated those same prefetched instances in memory, this
+    picks up the refreshed values instead of silently re-querying stale
+    ones from the database. Called without a prior refresh (e.g. some
+    future non-export use), it degrades gracefully to whatever's currently
+    stored - still correct, just only as fresh as the last import.
     """
-    matched_slot_ids = set(
-        nofo.sections.values_list(
-            "subsections__policy_language_slot_id", flat=True
-        ).distinct()
-    )
+    matched_slot_ids = {
+        subsection.policy_language_slot_id
+        for section in nofo.sections.all()
+        for subsection in section.subsections.all()
+    }
     matched_slot_ids.discard(None)
 
     missing = []
@@ -324,14 +371,22 @@ def get_policy_language_export_summary(nofo):
     Nofo-level rollup for the clearance export's page-1 summary: how many
     subsections were stripped as intact, which ones are flagged for review
     (so the summary can point straight at them), and which required slots
-    have no matching subsection anywhere in this NOFO. Computed fresh at
-    export time from the already-tagged subsections - it doesn't re-run
-    detection itself.
+    have no matching subsection anywhere in this NOFO.
+
+    Reads status/slot straight off each subsection instance rather than
+    re-querying - see get_missing_required_slots for why that matters once
+    refresh_policy_language_tags() has been called first. Sorted in Python
+    (not via .order_by()) for the same reason: an .order_by() call builds a
+    different queryset than the plain .all() a prior prefetch was primed
+    with, so it would silently bypass that cache and re-fetch stale rows
+    from the database instead of reading the refreshed ones.
     """
     stripped_count = 0
     flagged = []
-    for section in nofo.sections.all().order_by("order"):
-        for subsection in section.subsections.all().order_by("order"):
+    sections = sorted(nofo.sections.all(), key=lambda s: s.order or 0)
+    for section in sections:
+        subsections = sorted(section.subsections.all(), key=lambda s: s.order or 0)
+        for subsection in subsections:
             status = subsection.policy_language_status
             if status == "intact":
                 stripped_count += 1

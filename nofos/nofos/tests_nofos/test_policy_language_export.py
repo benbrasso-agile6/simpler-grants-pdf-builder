@@ -10,6 +10,7 @@ from users.models import BloomUser
 from nofos.models import Nofo, PolicyLanguageSlot, PolicyLanguageVariant, Section, Subsection
 from nofos.nofo import _build_document
 from nofos.readability import ReadabilityMetricsUnavailable
+from nofos.views import duplicate_nofo
 
 
 class PolicyLanguageImportTaggingTests(TestCase):
@@ -368,3 +369,133 @@ class NofoExportPolicyLanguagePostTests(TestCase):
     def test_unknown_action_rejected(self):
         resp = self.client.post(self.export_url, {"export_action": "bogus"})
         self.assertEqual(resp.status_code, 400)
+
+
+class NofoExportPolicyLanguageFreshnessTests(TestCase):
+    """
+    The clearance export must never trust the stored policy_language_status
+    for its own sake - nothing else in Builder keeps that column up to date
+    after import. These reproduce the three ways it goes stale and confirm
+    export still gets it right by recomputing fresh instead.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        call_command("ingest_canonical_policy_language")
+        cls.user = BloomUser.objects.create_user(
+            email="policy-freshness-test@example.com", password="testpass123",
+            group="bloom", force_password_reset=False,
+        )
+        cls.sam_slot = PolicyLanguageSlot.objects.get(slot_key="DG-001", is_current=True)
+
+    def setUp(self):
+        self.client = Client()
+        self.client.force_login(self.user)
+
+    @staticmethod
+    def _make_nofo(short_name, number):
+        nofo = Nofo.objects.create(
+            title=f"Freshness test {short_name}", short_name=short_name,
+            number=number, opdiv="TEST", group="bloom", status="draft",
+        )
+        section = Section.objects.create(
+            nofo=nofo, name="Before You Get Started",
+            html_id="before-you-get-started", order=1,
+        )
+        return nofo, section
+
+    @override_settings(HHS_NOFO_POLICY_EXPORT_ENABLED=True)
+    def test_subsection_edited_after_import_is_reflected_at_export(self):
+        # Imported intact (matches canonical DG-001 text exactly)...
+        nofo, section = self._make_nofo("edit-staleness", "TEST-FRESH-001")
+        subsection = Subsection.objects.create(
+            section=section, name=self.sam_slot.name, tag="h4",
+            body=self.sam_slot.variants.first().canonical_text, order=1,
+            policy_language_status="intact", policy_language_slot=self.sam_slot,
+        )
+
+        # ...then edited afterward, the way a program office would in the
+        # normal editor - nothing re-runs detection on save, so the stored
+        # column still says "intact" even though the content no longer
+        # matches. Confirm that's really the state before testing export.
+        subsection.body = "This paragraph has been substantively rewritten."
+        subsection.save(update_fields=["body"])
+        subsection.refresh_from_db()
+        self.assertEqual(subsection.policy_language_status, "intact")
+
+        export_url = reverse("nofos:nofo_export", kwargs={"pk": nofo.pk})
+        resp = self.client.get(export_url + "?policy_stripped=1")
+        body = resp.content.decode()
+
+        # If export trusted the stale stored status, this altered text
+        # would be silently stripped. It must instead render visible with
+        # a review flag.
+        self.assertIn("This paragraph has been substantively rewritten.", body)
+        self.assertIn("REVIEW: This section corresponds to", body)
+        self.assertNotIn("policy-language-stripped-note", body)
+
+    @override_settings(HHS_NOFO_POLICY_EXPORT_ENABLED=True)
+    def test_duplicated_nofo_reflects_edits_made_after_duplication(self):
+        original, section = self._make_nofo("dup-original", "TEST-FRESH-002")
+        Subsection.objects.create(
+            section=section, name=self.sam_slot.name, tag="h4",
+            body=self.sam_slot.variants.first().canonical_text, order=1,
+            policy_language_status="intact", policy_language_slot=self.sam_slot,
+        )
+
+        duplicate = duplicate_nofo(original)
+
+        duplicated_subsection = Subsection.objects.get(section__nofo=duplicate)
+        # duplicate_nofo() copies the stored field verbatim via
+        # model_to_dict - confirm that's really what happened here, so
+        # this test is exercising the real gap, not a mocked-up one.
+        self.assertEqual(duplicated_subsection.policy_language_status, "intact")
+
+        duplicated_subsection.body = "The duplicated content was then rewritten."
+        duplicated_subsection.save(update_fields=["body"])
+
+        export_url = reverse("nofos:nofo_export", kwargs={"pk": duplicate.pk})
+        resp = self.client.get(export_url + "?policy_stripped=1")
+        body = resp.content.decode()
+
+        self.assertIn("The duplicated content was then rewritten.", body)
+        self.assertIn("REVIEW: This section corresponds to", body)
+        self.assertNotIn("policy-language-stripped-note", body)
+
+    @override_settings(HHS_NOFO_POLICY_EXPORT_ENABLED=True)
+    def test_canonical_slot_revision_is_reflected_without_reimporting(self):
+        nofo, section = self._make_nofo("canonical-revision", "TEST-FRESH-003")
+        old_canonical_text = self.sam_slot.variants.first().canonical_text
+        Subsection.objects.create(
+            section=section, name=self.sam_slot.name, tag="h4",
+            body=old_canonical_text, order=1,
+            policy_language_status="intact", policy_language_slot=self.sam_slot,
+        )
+
+        # HHS revises DG-001's wording - supersede it, the same way
+        # ingest_canonical_policy_language would for a real template
+        # update, without ever re-importing this NOFO.
+        self.sam_slot.is_current = False
+        self.sam_slot.save(update_fields=["is_current"])
+        new_slot = PolicyLanguageSlot.objects.create(
+            slot_key="DG-001", name=self.sam_slot.name, slot_type="fixed",
+            required=True, template_version="TEST-REVISED",
+        )
+        PolicyLanguageVariant.objects.create(
+            slot=new_slot,
+            canonical_text="A deliberately revised version of the DG-001 text.",
+        )
+        self.sam_slot.superseded_by = new_slot
+        self.sam_slot.save(update_fields=["superseded_by"])
+
+        export_url = reverse("nofos:nofo_export", kwargs={"pk": nofo.pk})
+        resp = self.client.get(export_url + "?policy_stripped=1")
+        body = resp.content.decode()
+
+        # The subsection's text still matches the OLD wording, which is now
+        # superseded rather than current - it should be flagged as matching
+        # a prior version (content stays visible, same as any other
+        # non-intact status), not silently stripped as "intact".
+        self.assertNotIn("policy-language-stripped-note", body)
+        self.assertIn("REVIEW: This section matches a prior version of", body)
+        self.assertIn(old_canonical_text, body)  # visible, not stripped
