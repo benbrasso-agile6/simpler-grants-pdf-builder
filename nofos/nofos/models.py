@@ -902,12 +902,24 @@ class PolicyLanguageSlot(models.Model):
 
     class Meta:
         ordering = ["slot_key"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["slot_key"],
+                condition=models.Q(is_current=True),
+                name="unique_current_policy_language_slot_key",
+            ),
+        ]
 
     slot_key = models.CharField(
         "Slot key",
         max_length=32,
-        unique=True,
-        help_text="Human-readable reference id, e.g. 'DG-017'.",
+        help_text=(
+            "Human-readable reference id, e.g. 'DG-017'. Not unique across all "
+            "rows on purpose: superseded (is_current=False) revisions keep the "
+            "same slot_key as the current one, per the versioning design. Only "
+            "one row per slot_key may be is_current=True at a time (enforced "
+            "below)."
+        ),
     )
 
     name = models.CharField("Slot name", max_length=255)
