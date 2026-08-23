@@ -234,6 +234,37 @@ class SupersessionVersioningTests(TestCase):
         self.assertEqual(status, "intact")
         self.assertEqual(slot, new)
 
+    def test_whole_subsection_aligns_by_any_versions_name_after_rename(self):
+        # Regression test: a slot can be renamed across a supersession even
+        # when its canonical text doesn't change. Alignment must check every
+        # version's name, not just whichever version happens to be first in
+        # the (unordered) candidate list - otherwise a subsection correctly
+        # retitled to the new name fails to align at all and falls through
+        # to "none", silently treating real canonical text as ordinary
+        # content.
+        old = PolicyLanguageSlot.objects.create(
+            slot_key="TEST-RENAMED",
+            name="Old Heading",
+            slot_type="fixed",
+            template_version="v1",
+        )
+        PolicyLanguageVariant.objects.create(slot=old, canonical_text="Canonical text.")
+        old.is_current = False
+        old.save(update_fields=["is_current"])
+        new = PolicyLanguageSlot.objects.create(
+            slot_key="TEST-RENAMED",
+            name="New Heading",
+            slot_type="fixed",
+            template_version="v2",
+        )
+        PolicyLanguageVariant.objects.create(slot=new, canonical_text="Canonical text.")
+        old.superseded_by = new
+        old.save(update_fields=["superseded_by"])
+
+        status, slot = detect_policy_language_status("New Heading", "Canonical text.")
+        self.assertEqual(status, "intact")
+        self.assertEqual(slot, new)
+
 
 class MissingRequiredSlotsTests(TestCase):
     def test_required_slot_with_no_matching_subsection_is_missing(self):
@@ -426,3 +457,38 @@ class IngestCanonicalPolicyLanguageCommandTests(TestCase):
             new_current.variants.first().canonical_text,
             "A deliberately revised version of the DG-001 text.",
         )
+
+    def test_version_only_change_updates_in_place_without_superseding(self):
+        call_command("ingest_canonical_policy_language")
+        original = PolicyLanguageSlot.objects.get(slot_key="DG-001", is_current=True)
+        original_id = original.id
+        original_variant_id = original.variants.first().id
+
+        same_slots = [
+            {
+                "slot_key": "DG-001",
+                "name": original.name,
+                "slot_type": original.slot_type,
+                "required": original.required,
+                "flag_prominently": original.flag_prominently,
+                "variants": [
+                    {"canonical_text": original.variants.first().canonical_text}
+                ],
+            }
+        ]
+
+        with patch(
+            "nofos.management.commands.ingest_canonical_policy_language.SLOTS", same_slots
+        ), patch(
+            "nofos.management.commands.ingest_canonical_policy_language.TEMPLATE_VERSION",
+            "TEST-NEW-VERSION-LABEL",
+        ):
+            call_command("ingest_canonical_policy_language")
+
+        original.refresh_from_db()
+        self.assertTrue(original.is_current)
+        self.assertIsNone(original.superseded_by_id)
+        self.assertEqual(original.id, original_id)
+        self.assertEqual(original.template_version, "TEST-NEW-VERSION-LABEL")
+        self.assertEqual(original.variants.first().id, original_variant_id)
+        self.assertEqual(PolicyLanguageSlot.objects.filter(slot_key="DG-001").count(), 1)

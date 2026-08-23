@@ -182,7 +182,7 @@ SLOTS = [
     {
         "slot_key": "DG-005",
         "name": "Waiver of cost sharing requirements for insular areas",
-        "slot_type": "fixed_with_placeholders",
+        "slot_type": "fixed",
         "required": False,
         "flag_prominently": False,
         "variants": [
@@ -320,7 +320,7 @@ SLOTS = [
     {
         "slot_key": "DG-020",
         "name": "Administrative and national policy requirements",
-        "slot_type": "fixed_with_placeholders",
+        "slot_type": "fixed",
         "required": True,
         "flag_prominently": False,
         "variants": [
@@ -993,7 +993,7 @@ SLOTS = [
     {
         "slot_key": "DG-034",
         "name": "Appendix (research/R&R NOFOs)",
-        "slot_type": "fixed_with_placeholders",
+        "slot_type": "fixed",
         "required": False,  # research/R&R track only
         "flag_prominently": False,
         "variants": [

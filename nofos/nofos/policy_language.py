@@ -201,7 +201,15 @@ def detect_policy_language_status(subsection_name, subsection_body, candidate_sl
         ]
         if not whole_versions:
             continue
-        if (whole_versions[0].name or "").strip().lower() != name:
+        # Match against any version's name, not just whichever version
+        # happens to be first in the list - a slot can be renamed across a
+        # supersession (independent of whether its text also changed), and
+        # whole_versions isn't guaranteed to be ordered current-first. Using
+        # only one version's name here would mean a subsection correctly
+        # retitled to the new name (or still carrying an older name) fails
+        # to align at all, falling through to "none" - silently treating
+        # real canonical text as ordinary content.
+        if not any((s.name or "").strip().lower() == name for s in whole_versions):
             continue
 
         status = _check_slot_versions(whole_versions, candidate_text)
