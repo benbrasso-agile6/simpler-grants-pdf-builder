@@ -483,8 +483,14 @@ def _build_document(document, sections, SectionModel, SubsectionModel):
     # Fetched once per document, not once per subsection. Only the live Nofo's
     # Subsection model carries this field - ContentGuideSubsection and
     # CompareSubsection don't, so this never runs for Composer or Compare.
+    # Also gated on the feature flag itself: with it off, this prototype
+    # should add zero extra work/behavior to a normal import, not just hide
+    # the export UI.
     policy_language_slots = (
-        get_candidate_slots() if hasattr(SubsectionModel, "policy_language_status") else None
+        get_candidate_slots()
+        if hasattr(SubsectionModel, "policy_language_status")
+        and settings.HHS_NOFO_POLICY_EXPORT_ENABLED
+        else None
     )
 
     for section in sections:

@@ -159,14 +159,21 @@ def detect_policy_language_status(subsection_name, subsection_body, candidate_sl
 
     # Span-scoped slots aren't tied to a heading of their own - they're
     # fragments embedded inside a differently-named subsection - so they're
-    # checked against every subsection's body regardless of its name.
+    # checked against every subsection's body regardless of its name. All
+    # versions of a given slot_key are checked together (current first, then
+    # superseded - see _check_slot_versions), not one version at a time:
+    # checking versions independently would let a superseded row's match
+    # take priority over the current row's, since supersession means the
+    # older row was created first and would otherwise be seen first.
     for slot_versions in candidate_slots.values():
-        for slot in slot_versions:
-            if slot.match_scope != "span_within_subsection":
-                continue
-            status = _check_slot_versions([slot], candidate_text)
-            if status:
-                return status
+        span_versions = [
+            s for s in slot_versions if s.match_scope == "span_within_subsection"
+        ]
+        if not span_versions:
+            continue
+        status = _check_slot_versions(span_versions, candidate_text)
+        if status:
+            return status
 
     # Whole-subsection slots: align by name first. No name, or no name match
     # against any known slot -> a confident non-match, not ambiguous.
