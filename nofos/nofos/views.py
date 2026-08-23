@@ -126,6 +126,7 @@ from .nofo import (
     upload_cover_image_to_s3,
 )
 from .pdf_metadata import PDF_METADATA_FIELDS, is_missing_pdf_metadata_value
+from .policy_language import get_policy_language_export_summary
 from .readability import (
     ReadabilityMetricsAnalysisError,
     ReadabilityMetricsUnavailable,
@@ -320,22 +321,55 @@ class NOFOsExportView(DetailView):
         # Continue with the normal flow for anonymous or authorized users
         return super().dispatch(request, *args, **kwargs)
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        context["policy_export_enabled"] = settings.HHS_NOFO_POLICY_EXPORT_ENABLED
+        context["strip_policy_language"] = (
+            settings.HHS_NOFO_POLICY_EXPORT_ENABLED
+            and self.request.GET.get("policy_stripped") == "1"
+        )
+
+        if context["strip_policy_language"]:
+            context["clearance_summary"] = get_policy_language_export_summary(
+                self.object
+            )
+            try:
+                context["clearance_metrics"] = analyze_nofo_readability(self.object)
+            except (ReadabilityMetricsUnavailable, ReadabilityMetricsAnalysisError):
+                # Not fatal to the export - the summary section just omits the
+                # metrics table when the optional package isn't installed or
+                # can't analyze this revision.
+                context["clearance_metrics"] = None
+
+        return context
+
     def post(self, request, *args, **kwargs):
         nofo = self.get_object()
         action = request.POST.get("export_action")
 
-        if action != "download":
+        if action == "download":
+            export_url = request.build_absolute_uri(
+                reverse_lazy("nofos:nofo_export", args=[nofo.pk])
+            )
+            filename_base = nofo.short_name or nofo.title
+        elif action == "download_stripped" and settings.HHS_NOFO_POLICY_EXPORT_ENABLED:
+            export_url = request.build_absolute_uri(
+                "{}?policy_stripped=1".format(
+                    reverse_lazy("nofos:nofo_export", args=[nofo.pk])
+                )
+            )
+            filename_base = "{} (Policy Language Stripped)".format(
+                nofo.short_name or nofo.title
+            )
+        else:
             return HttpResponseBadRequest("Unknown action.")
-
-        export_url = request.build_absolute_uri(
-            reverse_lazy("nofos:nofo_export", args=[nofo.pk])
-        )
 
         return generate_docx_download_response(
             request=request,
             export_url=export_url,
             target_element="#download_target",
-            filename_base=(nofo.short_name or nofo.title),
+            filename_base=filename_base,
             tmp_name=str(nofo.pk),
         )
 
