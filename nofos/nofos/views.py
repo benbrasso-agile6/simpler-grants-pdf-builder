@@ -21,7 +21,7 @@ from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, prefetch_related_objects
 from django.forms.models import model_to_dict
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -126,7 +126,10 @@ from .nofo import (
     upload_cover_image_to_s3,
 )
 from .pdf_metadata import PDF_METADATA_FIELDS, is_missing_pdf_metadata_value
-from .policy_language import get_policy_language_export_summary
+from .policy_language import (
+    get_policy_language_export_summary,
+    refresh_policy_language_tags,
+)
 from .readability import (
     ReadabilityMetricsAnalysisError,
     ReadabilityMetricsUnavailable,
@@ -188,8 +191,16 @@ def duplicate_nofo(original_nofo, is_successor=False):
 
         new_subsections = [
             Subsection(
-                **model_to_dict(original_subsection, exclude=["id", "section"]),
+                **model_to_dict(
+                    original_subsection,
+                    exclude=["id", "section", "policy_language_slot"],
+                ),
                 section=section_map[original_subsection.section.id],
+                # model_to_dict() returns a FK field as its raw pk, which the
+                # model constructor rejects for the field's plain name (it
+                # needs an instance, or the _id form) - same reason "section"
+                # above is excluded and passed separately instead.
+                policy_language_slot_id=original_subsection.policy_language_slot_id,
             )
             for original_subsection in original_subsections
         ]
@@ -331,6 +342,14 @@ class NOFOsExportView(DetailView):
         )
 
         if context["strip_policy_language"]:
+            # Recompute fresh against current content before rendering -
+            # never trust the status stored at import time here, since a
+            # subsection edit, a "Duplicate NOFO," or a later canonical
+            # slot revision can all leave it stale. See
+            # refresh_policy_language_tags for why.
+            prefetch_related_objects([self.object], "sections__subsections")
+            refresh_policy_language_tags(self.object)
+
             context["clearance_summary"] = get_policy_language_export_summary(
                 self.object
             )
