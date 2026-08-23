@@ -296,3 +296,29 @@ def get_missing_required_slots(nofo):
         if slot.id not in matched_slot_ids:
             missing.append(slot)
     return missing
+
+
+def get_policy_language_export_summary(nofo):
+    """
+    Nofo-level rollup for the clearance export's page-1 summary: how many
+    subsections were stripped as intact, which ones are flagged for review
+    (so the summary can point straight at them), and which required slots
+    have no matching subsection anywhere in this NOFO. Computed fresh at
+    export time from the already-tagged subsections - it doesn't re-run
+    detection itself.
+    """
+    stripped_count = 0
+    flagged = []
+    for section in nofo.sections.all().order_by("order"):
+        for subsection in section.subsections.all().order_by("order"):
+            status = subsection.policy_language_status
+            if status == "intact":
+                stripped_count += 1
+            elif status in ("may_be_altered", "matches_prior_version"):
+                flagged.append(subsection)
+
+    return {
+        "stripped_count": stripped_count,
+        "flagged": flagged,
+        "missing_slots": get_missing_required_slots(nofo),
+    }

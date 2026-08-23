@@ -5,6 +5,7 @@
       <strong>PRE-DECISIONAL — FOR OMB/DEPARTMENTAL REVIEW ONLY. NOT THE OFFICIAL SUBMISSION COPY. NOT FOR PUBLICATION.</strong>
       Abbreviated version generated to support review under HHS's NOFO clearance process. Formatting may not fully reflect the original NOFO due to this abbreviated export process; consult the full PDF version for the authoritative content and layout.
     </div>
+    {% include "nofos/includes/nofo_export_clearance_summary.html" %}
   {% endif %}
   <!-- Render each section with all its subsections -->
   {% for section in nofo.sections.all|dictsort:"order" %}
