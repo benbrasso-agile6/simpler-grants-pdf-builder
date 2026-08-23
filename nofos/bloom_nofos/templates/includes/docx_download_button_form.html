@@ -31,6 +31,9 @@
       <h2 class="usa-modal__heading" id="docx-modal-heading{{ id_suffix }}">
         {{ modal_heading|default:"Generating Word document…" }}
       </h2>
+      {% if modal_notice %}
+        <p class="usa-prose text-italic margin-top-0">{{ modal_notice }}</p>
+      {% endif %}
 
       <div class="usa-prose" id="docx-modal-body{{ id_suffix }}">
         <!-- Loading state -->
