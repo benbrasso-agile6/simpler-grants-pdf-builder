@@ -98,7 +98,21 @@ def _variant_matches(canonical_text, candidate_text, match_scope):
     if match_scope == "span_within_subsection":
         return re.search(pattern, candidate_text, re.DOTALL) is not None
 
-    return re.fullmatch(gap + pattern + gap, candidate_text, re.DOTALL) is not None
+    # A leading/trailing gap is only warranted when canonical_text itself
+    # starts/ends with a {placeholder} - i.e. raw_spans[0]/[-1] is blank,
+    # since PLACEHOLDER_PATTERN.split() leaves an empty string at a boundary
+    # the pattern matched right up against. Unconditionally padding both
+    # sides here would let arbitrary extra content sneak in around every
+    # fixed span and silently defeat the fullmatch check below - degrading
+    # "the whole subsection must be the canonical text" into "the canonical
+    # text appears somewhere in the subsection", exactly what
+    # span_within_subsection is for, not this branch.
+    leading_gap = gap if not raw_spans[0].strip() else ""
+    trailing_gap = gap if not raw_spans[-1].strip() else ""
+    return (
+        re.fullmatch(leading_gap + pattern + trailing_gap, candidate_text, re.DOTALL)
+        is not None
+    )
 
 
 def _matches_any_variant(slot, candidate_text):
