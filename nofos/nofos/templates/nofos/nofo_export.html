@@ -37,6 +37,9 @@
         </ul>
         {% url 'nofos:nofo_export' nofo.id as action_url %}
         {% include "includes/download_docx_button.html" with action_url=action_url %}
+        {% if policy_export_enabled %}
+          {% include "includes/docx_download_button_form.html" with action_url=action_url export_action="download_stripped" id_suffix="-stripped" button_label="Download Word (Policy Language Stripped)" modal_heading="Generating stripped Word document…" %}
+        {% endif %}
       </nav>
     </div>
   </header>

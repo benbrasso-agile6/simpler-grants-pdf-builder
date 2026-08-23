@@ -215,6 +215,68 @@ def _check_slot_versions(slot_versions, candidate_text):
     return None
 
 
+# DG-018's elevated wording, drafted and confirmed during the design pass:
+# procedural and factual (names the content category, never characterizes or
+# takes a position on it), and never asserts a conclusion detection can't
+# actually verify ("does not match," "please confirm," not "has been
+# altered"). Keyed by slot_key since it's specific to that slot's content,
+# not a generic template - the only flag_prominently slot ingested so far.
+_ELEVATED_EXPORT_TEXT = {
+    "DG-018": {
+        "may_be_altered": (
+            "PRIORITY REVIEW: This section corresponds to HHS-locked "
+            "Department Governance language (Administration and agency "
+            "funding-priority criteria) and does not match the current "
+            "canonical text on file. Please confirm this section's wording "
+            "before this NOFO proceeds."
+        ),
+        "matches_prior_version": (
+            "PRIORITY REVIEW: This section matches an earlier version of "
+            "HHS-locked Department Governance language (Administration and "
+            "agency funding-priority criteria), not the current canonical "
+            "text. Please confirm this reflects current policy before this "
+            "NOFO proceeds."
+        ),
+    },
+}
+
+
+def get_policy_language_export_note(subsection):
+    """
+    The reviewer-facing note for a subsection whose policy_language_status
+    warrants staying visible in a stripped export - "may_be_altered" or
+    "matches_prior_version". Returns None for "none" (ordinary content,
+    rendered unmarked) and "intact" (stripped entirely, no note needed).
+
+    Uses a slot's flag_prominently, curated elevated wording when one is
+    on file for this exact slot_key + status combination; otherwise falls
+    back to routine wording naming the slot generically.
+    """
+    status = subsection.policy_language_status
+    if status not in ("may_be_altered", "matches_prior_version"):
+        return None
+
+    slot = subsection.policy_language_slot
+    if slot is not None:
+        elevated = _ELEVATED_EXPORT_TEXT.get(slot.slot_key, {})
+        if slot.flag_prominently and status in elevated:
+            return elevated[status]
+
+    name = slot.name if slot else "HHS Department Governance"
+    if status == "matches_prior_version":
+        return (
+            f"REVIEW: This section matches a prior version of {name} "
+            "language, not the current canonical text on file. Please "
+            "confirm this reflects current policy before this NOFO "
+            "proceeds."
+        )
+    return (
+        f"REVIEW: This section corresponds to {name} language and does not "
+        "match the current canonical text on file. Please confirm this "
+        "section's wording before this NOFO proceeds."
+    )
+
+
 def get_missing_required_slots(nofo):
     """
     Required slots with no matching subsection anywhere in this NOFO. This is
