@@ -3,12 +3,19 @@ Canonical HHS Department Governance policy-language slots, transcribed from
 the pre-final FY27 HHS-wide NOFO Master Template (provided 2026-08-11) and,
 for DG-004, the "Simpler Cost Sharing" tool document.
 
-This is a representative subset of the ~50 slots identified during the full
-review of the Master Template, not the complete catalog. It covers every
-slot_type, match_scope, and flag_prominently case that was identified, so the
-ingestion command can be exercised end-to-end. The remaining slots follow the
-identical structure and can be appended here directly by transcribing them
-from the reference doc — that's mechanical data entry, not a design question.
+This covers every Department Governance slot identified during the four-pass
+review of the Master Template, except DG-039 (a 17-item eligible-applicants
+checklist) and the 3-item system checklist nested inside DG-041 - both
+deliberately excluded as canonical text: their candidate spans are single- or
+two-word labels ("Individuals", "SAM.gov"), and span_within_subsection checks
+every subsection in a NOFO regardless of name, so text that short and generic
+would false-match against unrelated prose elsewhere in the document.
+
+Checklist-shaped content (a shared instruction followed by several
+independently keep-or-delete lines, e.g. DG-006a/b, DG-015a-f, DG-026a-d,
+DG-033a-d, DG-040/040a-c, DG-044a-d, DG-046a-c, DG-047/047a-f) is modeled as
+one independent optional slot per line, per the resolved schema decision -
+never one slot with sub-options.
 
 Each slot is a dict with:
     slot_key           human-readable id, e.g. "DG-017"
@@ -554,6 +561,809 @@ SLOTS = [
                     "electronic submission process, visit the How to Apply – "
                     "Application Guide. See tips for avoiding common errors. See "
                     "Contacts and Support, for help with systems."
+                ),
+            },
+        ],
+    },
+    # ------------------------------------------------------------------
+    # Remaining slots from the second/third/fourth passes over the Master
+    # Template. Two things worth knowing before touching this section:
+    #
+    # - Checklist-shaped content (a shared instruction followed by several
+    #   independently keep-or-delete lines) is modeled as one independent
+    #   optional slot per line, per the resolved schema decision - not one
+    #   slot with sub-options.
+    # - match_scope is span_within_subsection wherever the reference doc
+    #   notes that other, untracked content (an excluded placeholder, a
+    #   sibling checklist line, a table header) shares the same Subsection
+    #   body. whole_subsection now requires the ENTIRE body to be exactly
+    #   the canonical text (see the _variant_matches fix in
+    #   policy_language.py) - marking something whole_subsection when its
+    #   real subsection also contains untracked sibling content would
+    #   misreport every real occurrence as "may_be_altered".
+    #
+    # Deliberately NOT transcribed: DG-039 (the 17-item eligible-applicants
+    # checklist) and DG-041's 3-item "SAM.gov / Grants.gov / eRA Commons"
+    # checklist. Both are single- or two-word labels, and span_within_subsection
+    # checks every subsection in the NOFO regardless of name - a canonical
+    # span that short and generic ("Individuals", "SAM.gov") would false-match
+    # against unrelated prose elsewhere in the document. Not worth the noise.
+    # ------------------------------------------------------------------
+    {
+        "slot_key": "DG-006a",
+        "name": "Cost sharing type: cash contributions",
+        "slot_type": "fixed",
+        "required": False,
+        "flag_prominently": False,
+        "variants": [
+            {
+                "canonical_text": (
+                    "Cash contributed by your organization, partners, or other "
+                    "third parties."
+                ),
+            },
+        ],
+    },
+    {
+        "slot_key": "DG-006b",
+        "name": "Cost sharing type: in-kind contributions",
+        "slot_type": "fixed",
+        "required": False,
+        "flag_prominently": False,
+        "variants": [
+            {
+                "canonical_text": (
+                    "In-kind (non-cash) contributions from partners or other "
+                    "third parties."
+                ),
+            },
+        ],
+    },
+    {
+        "slot_key": "DG-007",
+        "name": "Cost sharing commitments",
+        "slot_type": "fixed",
+        "required": False,  # conditional: only applies when cost sharing applies
+        "flag_prominently": False,
+        "variants": [
+            {
+                "canonical_text": (
+                    "If you receive an award, you must provide any cost sharing "
+                    "funds you committed to in your application, even if that "
+                    "amount exceeds the required minimum. Cost sharing commitments "
+                    "are subject to the requirements of 2 CFR 200.306. We will "
+                    "include your commitment in the Notice of Award. If you don't "
+                    "provide your voluntary cost share amount, we may decrease the "
+                    "amount of funding we give you. You'll have to include your "
+                    "cost sharing funds in your federal financial reports."
+                ),
+            },
+        ],
+    },
+    {
+        "slot_key": "DG-009",
+        "name": "Indirect costs, Standard rate methods",
+        "slot_type": "fixed",
+        "required": False,  # optional per the template's own instruction
+        "flag_prominently": False,
+        "variants": [
+            {
+                "canonical_text": (
+                    "To charge indirect costs you can select one of two methods: "
+                    "Method 1 — Approved rate. If you currently have an indirect "
+                    "cost rate approved by your cognizant federal agency, you may "
+                    "use that rate. Method 2 — De minimis rate. If you do not have "
+                    "an approved indirect cost rate, you may charge a de minimis "
+                    "rate (see 2 CFR 200.414(f)). This rate is up to 15% of "
+                    "modified total direct costs. See the definition at 2 CFR "
+                    "200.1. You can use this rate indefinitely."
+                ),
+            },
+        ],
+    },
+    {
+        "slot_key": "DG-010",
+        "name": "Indirect costs, Training awards",
+        "slot_type": "fixed",
+        "required": False,
+        "flag_prominently": False,
+        "variants": [
+            {
+                "canonical_text": (
+                    "We limit indirect costs on training grants to a fixed rate "
+                    "of 8% of modified total direct costs (MTDC). MTDC means 8% "
+                    "of your total direct costs minus: Tuition and related fees. "
+                    "Direct equipment costs. Any part of a subaward over $25,000. "
+                    "See 2 CFR 300.414(a)."
+                ),
+            },
+        ],
+    },
+    {
+        "slot_key": "DG-011",
+        "name": "Indirect costs, Foreign entity awards",
+        "slot_type": "fixed",
+        "required": False,
+        "flag_prominently": False,
+        "variants": [
+            {
+                "canonical_text": (
+                    "We may pay indirect costs on grants to foreign organizations "
+                    "and foreign public entities to help them meet federal "
+                    "requirements. To qualify, the organization must carry out "
+                    "the entire project outside U.S. territorial limits. We "
+                    "limit these indirect costs to a fixed rate of 8% of "
+                    "modified total direct costs (MTDC). MTDC means 8% of your "
+                    "total direct costs minus: Tuition and related fees. Direct "
+                    "equipment costs. Any part of a subaward over $25,000. See "
+                    "2 CFR 300.414(b)."
+                ),
+            },
+        ],
+    },
+    {
+        "slot_key": "DG-012",
+        "name": "Program income",
+        "slot_type": "fixed",
+        "required": False,  # not every program generates program income
+        "flag_prominently": False,
+        "variants": [
+            {
+                "canonical_text": (
+                    "Program income is money earned from award-supported project "
+                    "activities. You must use program income for the same "
+                    "purposes and under the terms and conditions of the award. "
+                    "Find more about program income at 2 CFR 200.307."
+                ),
+            },
+        ],
+    },
+    {
+        "slot_key": "DG-013",
+        "name": "Cooperative agreement terms intro",
+        "slot_type": "fixed",
+        "match_scope": "span_within_subsection",  # sits above untracked {Bulleted list} placeholders
+        "required": False,  # whole section is conditional (cooperative agreements only)
+        "flag_prominently": False,
+        "variants": [
+            {
+                "canonical_text": (
+                    "A cooperative agreement requires our substantial "
+                    "involvement. In a cooperative agreement, HHS staff will be "
+                    "actively involved in the project by providing guidance, "
+                    "coordination, technical assistance, or other support."
+                ),
+            },
+        ],
+    },
+    {
+        "slot_key": "DG-014",
+        "name": "Find the application package",
+        "slot_type": "fixed",
+        "required": True,
+        "flag_prominently": False,
+        "variants": [
+            {
+                "canonical_text": (
+                    "The application package has all the forms you need to "
+                    "apply. You can find them at this NOFO's Grants.gov "
+                    "opportunity page. Then select the Package tab. We recommend "
+                    "that you select the Subscribe button from the View Grant "
+                    "Opportunity page for this NOFO to get updates."
+                ),
+            },
+        ],
+    },
+    {
+        "slot_key": "DG-015",
+        "name": "Letter of intent scaffolding",
+        "slot_type": "fixed",
+        "required": False,  # whole section is deletable if the agency doesn't use LOIs
+        "flag_prominently": False,
+        "variants": [
+            {
+                "canonical_text": (
+                    "Submitting a letter of intent is optional. We use letters "
+                    "of intent to estimate the number of expert reviewers needed "
+                    "to evaluate applications. If you do not submit a letter of "
+                    "intent, you may still apply."
+                ),
+            },
+        ],
+    },
+    {
+        "slot_key": "DG-015a",
+        "name": "LOI info: funding opportunity number and title",
+        "slot_type": "fixed",
+        "required": False,
+        "flag_prominently": False,
+        "variants": [{"canonical_text": "Funding opportunity number and title."}],
+    },
+    {
+        "slot_key": "DG-015b",
+        "name": "LOI info: organization name and address",
+        "slot_type": "fixed",
+        "required": False,
+        "flag_prominently": False,
+        "variants": [{"canonical_text": "Your organization's name and address."}],
+    },
+    {
+        "slot_key": "DG-015c",
+        "name": "LOI info: contact information",
+        "slot_type": "fixed",
+        "required": False,
+        "flag_prominently": False,
+        "variants": [
+            {"canonical_text": "A contact name, phone number, and email address."}
+        ],
+    },
+    {
+        "slot_key": "DG-015d",
+        "name": "LOI info: statement of interest",
+        "slot_type": "fixed",
+        "required": False,
+        "flag_prominently": False,
+        "variants": [
+            {"canonical_text": "A statement of your interest in applying."}
+        ],
+    },
+    {
+        "slot_key": "DG-015e",
+        "name": "LOI info: geographic areas of participation",
+        "slot_type": "fixed",
+        "required": False,
+        "flag_prominently": False,
+        "variants": [
+            {"canonical_text": "The proposed geographic areas of participation."}
+        ],
+    },
+    {
+        "slot_key": "DG-015f",
+        "name": "LOI info: brief organization description",
+        "slot_type": "fixed",
+        "required": False,
+        "flag_prominently": False,
+        "variants": [
+            {"canonical_text": "A brief description of your organization."}
+        ],
+    },
+    {
+        "slot_key": "DG-021",
+        "name": "Alignment with agency priorities",
+        "slot_type": "fixed_with_placeholders",
+        "required": True,
+        "flag_prominently": False,
+        "variants": [
+            {
+                "canonical_text": (
+                    "Recipients must use any funds awarded under this NOFO to "
+                    "advance program goals or agency priorities in alignment "
+                    "with the agency priorities at {insert hyperlink to agency "
+                    "priorities}, when authorized by applicable law, the program "
+                    "statute, and court orders."
+                ),
+            },
+        ],
+    },
+    {
+        "slot_key": "DG-028",
+        "name": "Attachments submission instruction (non-research NOFOs)",
+        "slot_type": "fixed",
+        "match_scope": "span_within_subsection",  # sits inside a table alongside header labels
+        "required": False,  # non-research track only
+        "flag_prominently": False,
+        "variants": [
+            {"canonical_text": "Insert each in a single Other Attachments form."}
+        ],
+    },
+    {
+        "slot_key": "DG-029",
+        "name": "Other required forms instruction (non-research NOFOs)",
+        "slot_type": "fixed",
+        "match_scope": "span_within_subsection",
+        "required": False,
+        "flag_prominently": False,
+        "variants": [{"canonical_text": "Complete these forms in Grants.gov."}],
+    },
+    {
+        "slot_key": "DG-030",
+        "name": "Application contents and format (research/R&R NOFOs)",
+        "slot_type": "fixed_with_placeholders",
+        "required": False,  # research/R&R track only
+        "flag_prominently": False,
+        "variants": [
+            {
+                "canonical_text": (
+                    "You must follow the instructions in the How to Apply: "
+                    "Application Guide unless this NOFO says otherwise. Use the "
+                    "instructions for {choose between: Research OR Career "
+                    "Development OR Training OR Fellowship OR Multi-Project OR "
+                    "SBIR/STTR.} We strictly enforce these requirements. If you "
+                    "do not follow them, we may delay or not accept your "
+                    "application for review. See responsiveness criteria to make "
+                    "sure you meet all requirements. As you build your "
+                    "application, keep the review criteria in mind."
+                ),
+            },
+        ],
+    },
+    {
+        "slot_key": "DG-031",
+        "name": "PHS 398 Research Plan form intro",
+        "slot_type": "fixed",
+        "required": False,  # research track only
+        "flag_prominently": False,
+        "variants": [
+            {
+                "canonical_text": (
+                    "You will use the PHS 398 Research Plan form to complete "
+                    "your research plan. You will upload each of the following "
+                    "parts of the form as a separate attachment. Some parts may "
+                    "not be required for your application. We provide guidance "
+                    "here and in the Application Guide. Follow all instructions "
+                    "for this form in the application guide. We note additional "
+                    "instructions in this NOFO."
+                ),
+            },
+        ],
+    },
+    {
+        "slot_key": "DG-032",
+        "name": "Introduction (resubmission/revision applications)",
+        "slot_type": "fixed",
+        "required": False,  # resubmission/revision applications only
+        "flag_prominently": False,
+        "variants": [
+            {
+                "canonical_text": (
+                    "This section only applies to resubmission or revision "
+                    "applications. Do not include this section if you are "
+                    "submitting a new or renewal application."
+                ),
+            },
+        ],
+    },
+    {
+        "slot_key": "DG-033a",
+        "name": "Other research plan section: vertebrate animals condition",
+        "slot_type": "fixed",
+        "match_scope": "span_within_subsection",  # one row of a table with other, non-canonical rows
+        "required": False,
+        "flag_prominently": False,
+        "variants": [
+            {
+                "canonical_text": (
+                    "If you answer 'Yes' to the question 'Are Vertebrate Animals "
+                    "Used?' on the R.220 - R&R Other Project Information Form."
+                ),
+            },
+        ],
+    },
+    {
+        "slot_key": "DG-033b",
+        "name": "Other research plan section: select agent research condition",
+        "slot_type": "fixed",
+        "match_scope": "span_within_subsection",
+        "required": False,
+        "flag_prominently": False,
+        "variants": [
+            {
+                "canonical_text": (
+                    "If your proposed activities involve the use of select "
+                    "agents at any time during the proposed period of "
+                    "performance."
+                ),
+            },
+        ],
+    },
+    {
+        "slot_key": "DG-033c",
+        "name": "Other research plan section: multiple PI/PD leadership plan condition",
+        "slot_type": "fixed",
+        "match_scope": "span_within_subsection",
+        "required": False,
+        "flag_prominently": False,
+        "variants": [
+            {
+                "canonical_text": (
+                    "If you designate multiple PD/PIs (on the R.240 - R&R "
+                    "Senior/Key Person Profile (Expanded) Form)."
+                ),
+            },
+        ],
+    },
+    {
+        "slot_key": "DG-033d",
+        "name": (
+            "Other research plan section: consortium and contractual "
+            "arrangements condition"
+        ),
+        "slot_type": "fixed",
+        "match_scope": "span_within_subsection",
+        "required": False,
+        "flag_prominently": False,
+        "variants": [
+            {
+                "canonical_text": (
+                    "If you include any consortiums or contracts in your budget."
+                ),
+            },
+        ],
+    },
+    {
+        "slot_key": "DG-034",
+        "name": "Appendix (research/R&R NOFOs)",
+        "slot_type": "fixed_with_placeholders",
+        "required": False,  # research/R&R track only
+        "flag_prominently": False,
+        "variants": [
+            {
+                "canonical_text": (
+                    "We allow only limited appendix materials. Do not use the "
+                    "appendix to get around page limits. You may attach up to "
+                    "10 PDF documents in the appendix."
+                ),
+            },
+        ],
+    },
+    {
+        "slot_key": "DG-035",
+        "name": "PHS 398 Modular Budget Form eligibility",
+        "slot_type": "fixed",
+        "required": False,  # conditional on that budget-form flexibility being offered
+        "flag_prominently": False,
+        "variants": [
+            {
+                "canonical_text": (
+                    "If the applicant is a domestic organization requesting "
+                    "$250,000 or less in direct costs per budget period, you may "
+                    "opt to use the PHS 398 Modular Budget Form instead of the "
+                    "R&R Budget Form."
+                ),
+            },
+        ],
+    },
+    {
+        "slot_key": "DG-036",
+        "name": "Other Attachments Form instruction (research/R&R NOFOs)",
+        "slot_type": "fixed",
+        "required": False,  # research/R&R track only
+        "flag_prominently": False,
+        "variants": [
+            {
+                "canonical_text": (
+                    "You will use the Other Attachments form to upload the "
+                    "following attachments."
+                ),
+            },
+        ],
+    },
+    {
+        "slot_key": "DG-040",
+        "name": "Responsiveness criteria intro",
+        "slot_type": "fixed",
+        "match_scope": "span_within_subsection",  # nested intro to 3 independently-deletable bullets
+        "required": True,
+        "flag_prominently": False,
+        "variants": [
+            {
+                "canonical_text": (
+                    "We will review your application to make sure it meets "
+                    "these requirements. We won't consider an application that:"
+                ),
+            },
+        ],
+    },
+    {
+        "slot_key": "DG-040a",
+        "name": "Responsiveness criteria: eligibility",
+        "slot_type": "fixed",
+        "match_scope": "span_within_subsection",
+        "required": False,
+        "flag_prominently": False,
+        "variants": [{"canonical_text": "Does not meet all eligibility criteria."}],
+    },
+    {
+        "slot_key": "DG-040b",
+        "name": "Responsiveness criteria: deadline",
+        "slot_type": "fixed",
+        "match_scope": "span_within_subsection",
+        "required": False,
+        "flag_prominently": False,
+        "variants": [{"canonical_text": "Is submitted after the deadline."}],
+    },
+    {
+        "slot_key": "DG-040c",
+        "name": "Responsiveness criteria: required forms",
+        "slot_type": "fixed",
+        "match_scope": "span_within_subsection",
+        "required": False,
+        "flag_prominently": False,
+        "variants": [
+            {
+                "canonical_text": (
+                    "Does not include all required forms and documents in the "
+                    "application checklist."
+                ),
+            },
+        ],
+    },
+    {
+        "slot_key": "DG-041a",
+        "name": "Get registered recap intro",
+        "slot_type": "fixed",
+        "match_scope": "span_within_subsection",  # nested intro to a system checklist, deliberately not transcribed (too short/generic - see file header note)
+        "required": False,
+        "flag_prominently": False,
+        "variants": [{"canonical_text": "Make sure you have an active account with:"}],
+    },
+    {
+        "slot_key": "DG-041b",
+        "name": "Get registered recap closing",
+        "slot_type": "fixed",
+        "match_scope": "span_within_subsection",
+        "required": False,
+        "flag_prominently": False,
+        "variants": [
+            {
+                "canonical_text": (
+                    "See Before You Get Started to learn how. Need help? See "
+                    "Contacts and Support."
+                ),
+            },
+        ],
+    },
+    {
+        "slot_key": "DG-042",
+        "name": "Salary rate limitation",
+        "slot_type": "fixed",
+        "match_scope": "span_within_subsection",  # one fixed bullet among otherwise-placeholder siblings
+        "required": False,  # deletable if not funded by the Annual Appropriations Act
+        "flag_prominently": False,
+        "variants": [
+            {
+                "canonical_text": (
+                    "The salary rate limitation in the current appropriations "
+                    "act applies to this program. You may not use funds under "
+                    "this award to pay all or part of a salary that is higher "
+                    "than the current Federal Executive Level II rate. This "
+                    "salary rate applies to both direct and indirect costs."
+                ),
+            },
+        ],
+    },
+    {
+        "slot_key": "DG-043",
+        "name": "Unallowable costs, fixed framing",
+        "slot_type": "fixed_with_placeholders",
+        "required": False,
+        "flag_prominently": False,
+        "variants": [
+            {
+                "canonical_text": (
+                    "You may not use funds for: {Insert bulleted list of "
+                    "unallowable costs} For guidance on some types of "
+                    "restricted or not allowed costs, see 2 CFR 200.420 "
+                    "(Considerations for Selected Items of Cost), 2 CFR "
+                    "300.218, and 2 CFR 300.219."
+                ),
+            },
+        ],
+    },
+    {
+        "slot_key": "DG-044a",
+        "name": "Narrative format requirement: font color",
+        "slot_type": "fixed",
+        "match_scope": "span_within_subsection",  # font size is an excluded, untracked sibling placeholder
+        "required": False,
+        "flag_prominently": False,
+        "variants": [{"canonical_text": "Font color: Black"}],
+    },
+    {
+        "slot_key": "DG-044b",
+        "name": "Narrative format requirement: spacing",
+        "slot_type": "fixed",
+        "match_scope": "span_within_subsection",
+        "required": False,
+        "flag_prominently": False,
+        "variants": [{"canonical_text": "Spacing: Single-spaced"}],
+    },
+    {
+        "slot_key": "DG-044c",
+        "name": "Narrative format requirement: margins",
+        "slot_type": "fixed",
+        "match_scope": "span_within_subsection",
+        "required": False,
+        "flag_prominently": False,
+        "variants": [{"canonical_text": "Margins: 1-inch"}],
+    },
+    {
+        "slot_key": "DG-044d",
+        "name": "Narrative format requirement: page size",
+        "slot_type": "fixed",
+        "match_scope": "span_within_subsection",
+        "required": False,
+        "flag_prominently": False,
+        "variants": [{"canonical_text": "Size: 8.5 by 11 inches"}],
+    },
+    {
+        "slot_key": "DG-045",
+        "name": "Project summary instructions",
+        "slot_type": "fixed",
+        "match_scope": "span_within_subsection",  # shares a body with the DG-046 checklist
+        "required": False,
+        "flag_prominently": False,
+        "variants": [
+            {
+                "canonical_text": (
+                    "Page limit: 1. Write a one-page summary of your proposed "
+                    "project using the instructions. Do not include any "
+                    "proprietary or confidential information, jargon, or "
+                    "acronyms. We will use this document for information "
+                    "sharing and public information requests if you receive an "
+                    "award."
+                ),
+            },
+        ],
+    },
+    {
+        "slot_key": "DG-046a",
+        "name": "Project summary basic info: organization name",
+        "slot_type": "fixed",
+        "match_scope": "span_within_subsection",
+        "required": False,
+        "flag_prominently": False,
+        "variants": [{"canonical_text": "The name of your organization."}],
+    },
+    {
+        "slot_key": "DG-046b",
+        "name": "Project summary basic info: subrecipients",
+        "slot_type": "fixed",
+        "match_scope": "span_within_subsection",
+        "required": False,
+        "flag_prominently": False,
+        "variants": [
+            {
+                "canonical_text": (
+                    "The names of any subrecipients or sub-awardee "
+                    "organizations, if applicable."
+                ),
+            },
+        ],
+    },
+    {
+        "slot_key": "DG-046c",
+        "name": "Project summary basic info: total budget amount",
+        "slot_type": "fixed",
+        "match_scope": "span_within_subsection",
+        "required": False,
+        "flag_prominently": False,
+        "variants": [{"canonical_text": "Total budget amount."}],
+    },
+    {
+        "slot_key": "DG-047",
+        "name": "Award description guidance intro",
+        "slot_type": "fixed",
+        "match_scope": "span_within_subsection",  # nested intro to 6 independently-deletable bullets
+        "required": False,
+        "flag_prominently": False,
+        "variants": [
+            {
+                "canonical_text": (
+                    "We may use this portion of your project summary publicly "
+                    "on USASpending.gov. In plain language, briefly describe:"
+                ),
+            },
+        ],
+    },
+    {
+        "slot_key": "DG-047a",
+        "name": "Award description guidance: purpose",
+        "slot_type": "fixed",
+        "match_scope": "span_within_subsection",
+        "required": False,
+        "flag_prominently": False,
+        "variants": [{"canonical_text": "The award's purpose."}],
+    },
+    {
+        "slot_key": "DG-047b",
+        "name": "Award description guidance: activities",
+        "slot_type": "fixed",
+        "match_scope": "span_within_subsection",
+        "required": False,
+        "flag_prominently": False,
+        "variants": [
+            {"canonical_text": "An understanding of the project's activities."}
+        ],
+    },
+    {
+        "slot_key": "DG-047c",
+        "name": "Award description guidance: deliverables and outcomes",
+        "slot_type": "fixed",
+        "match_scope": "span_within_subsection",
+        "required": False,
+        "flag_prominently": False,
+        "variants": [
+            {
+                "canonical_text": (
+                    "The expected deliverables and expected outcomes."
+                ),
+            },
+        ],
+    },
+    {
+        "slot_key": "DG-047d",
+        "name": "Award description guidance: beneficiaries",
+        "slot_type": "fixed",
+        "match_scope": "span_within_subsection",
+        "required": False,
+        "flag_prominently": False,
+        "variants": [{"canonical_text": "Who will benefit from the award."}],
+    },
+    {
+        "slot_key": "DG-047e",
+        "name": "Award description guidance: main goals",
+        "slot_type": "fixed",
+        "match_scope": "span_within_subsection",
+        "required": False,
+        "flag_prominently": False,
+        "variants": [{"canonical_text": "Your project's main goals."}],
+    },
+    {
+        "slot_key": "DG-047f",
+        "name": "Award description guidance: subrecipient activities",
+        "slot_type": "fixed",
+        "match_scope": "span_within_subsection",
+        "required": False,
+        "flag_prominently": False,
+        "variants": [{"canonical_text": "Any known subrecipient activities."}],
+    },
+    {
+        "slot_key": "DG-048",
+        "name": "Project narrative heading instruction",
+        "slot_type": "fixed",
+        "match_scope": "span_within_subsection",  # followed by untracked, placeholder-paired headings
+        "required": True,
+        "flag_prominently": False,
+        "variants": [
+            {
+                "canonical_text": (
+                    "Your project narrative must use these exact headings, "
+                    "subheadings, and order:"
+                ),
+            },
+        ],
+    },
+    {
+        "slot_key": "DG-049",
+        "name": "Scoring process, non-research NOFOs",
+        "slot_type": "fixed",
+        "required": False,  # non-research track only
+        "flag_prominently": False,
+        "variants": [
+            {
+                "canonical_text": (
+                    "You can find the merit review criteria for each relevant "
+                    "application section in Step 3: Build Your Application."
+                ),
+            },
+        ],
+    },
+    {
+        "slot_key": "DG-050",
+        "name": "Reporting, fixed framing",
+        "slot_type": "fixed_with_placeholders",
+        "required": False,
+        "flag_prominently": False,
+        "variants": [
+            {
+                "canonical_text": (
+                    "If you receive an award, you will have to submit "
+                    "financial and performance reports. These include "
+                    "financial and performance reports. {Insert NOFO-specific "
+                    "reporting detail} To learn more about these reporting "
+                    "requirements, see {name of site with embedded link} on "
+                    "our website."
                 ),
             },
         ],
