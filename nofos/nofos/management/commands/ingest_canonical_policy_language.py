@@ -27,7 +27,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         dry_run = options["dry_run"]
-        created, superseded, unchanged = 0, 0, 0
+        created, superseded, unchanged, version_updated = 0, 0, 0, 0
 
         with transaction.atomic():
             for slot_data in SLOTS:
@@ -45,8 +45,29 @@ class Command(BaseCommand):
                     .first()
                 )
 
-                if existing and self._unchanged(existing, name, slot_data, variants_data):
-                    unchanged += 1
+                if existing and self._content_matches(
+                    existing, name, slot_data, variants_data
+                ):
+                    if existing.template_version == TEMPLATE_VERSION:
+                        unchanged += 1
+                        continue
+
+                    # Same name/fields/variants, only the version label moved
+                    # (e.g. a template re-issued verbatim under a new FY tag).
+                    # Update the label in place rather than superseding - a
+                    # supersession implies the canonical text actually changed,
+                    # which would be misleading here and would needlessly
+                    # invalidate policy_language_status on NOFOs already
+                    # checked against this slot.
+                    if dry_run:
+                        self.stdout.write(
+                            f"Would update template_version: {slot_key} — {name} "
+                            f"({existing.template_version} -> {TEMPLATE_VERSION})"
+                        )
+                    else:
+                        existing.template_version = TEMPLATE_VERSION
+                        existing.save(update_fields=["template_version"])
+                    version_updated += 1
                     continue
 
                 new_slot = PolicyLanguageSlot(
@@ -89,12 +110,15 @@ class Command(BaseCommand):
         self.stdout.write(
             self.style.SUCCESS(
                 f"{'[DRY RUN] ' if dry_run else ''}"
-                f"{created} created, {superseded} superseded, {unchanged} unchanged."
+                f"{created} created, {superseded} superseded, "
+                f"{version_updated} version_updated, {unchanged} unchanged."
             )
         )
 
-    def _unchanged(self, existing_slot, name, slot_data, variants_data):
-        """True if existing_slot already matches the incoming data exactly (a no-op)."""
+    def _content_matches(self, existing_slot, name, slot_data, variants_data):
+        """True if existing_slot's name/fields/variants already match the incoming
+        data exactly, regardless of template_version (checked separately by the
+        caller)."""
         if existing_slot.name != name:
             return False
         for field, value in slot_data.items():
