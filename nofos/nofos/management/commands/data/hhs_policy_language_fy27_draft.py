@@ -80,7 +80,10 @@ SLOTS = [
     },
     {
         "slot_key": "DG-003",
-        "name": "Cost sharing, not required",
+        # "Cost sharing" is the real heading text - both this and DG-004
+        # deliberately share it, since a NOFO's Cost sharing section is
+        # either this paragraph or DG-004's, never both.
+        "name": "Cost sharing",
         "slot_type": "fixed",
         # Conceptually one of two mutually-exclusive cost-sharing paths, but its
         # sibling (DG-004) is architecturally a separate parameterized_family
@@ -104,7 +107,9 @@ SLOTS = [
     },
     {
         "slot_key": "DG-004",
-        "name": "Cost sharing, percentage requirement",
+        # See DG-003 - both deliberately share the real heading text
+        # "Cost sharing".
+        "name": "Cost sharing",
         "slot_type": "parameterized_family",
         "required": False,
         "flag_prominently": False,
@@ -183,6 +188,9 @@ SLOTS = [
         "slot_key": "DG-005",
         "name": "Waiver of cost sharing requirements for insular areas",
         "slot_type": "fixed",
+        # A sentence embedded in the "Cost sharing" section body, not its
+        # own heading - never whole_subsection.
+        "match_scope": "span_within_subsection",
         "required": False,
         "flag_prominently": False,
         "variants": [
@@ -200,7 +208,10 @@ SLOTS = [
     },
     {
         "slot_key": "DG-008",
-        "name": "Indirect costs definition",
+        # "Indirect costs" is the real heading text - DG-008/009/010/011
+        # deliberately share it, since a NOFO's Indirect costs section can
+        # be any combination of these sub-topics.
+        "name": "Indirect costs",
         "slot_type": "fixed",
         "required": True,
         "flag_prominently": False,
@@ -593,6 +604,9 @@ SLOTS = [
         "slot_key": "DG-006a",
         "name": "Cost sharing type: cash contributions",
         "slot_type": "fixed",
+        # A bullet under "Types of cost sharing," not its own heading -
+        # never whole_subsection.
+        "match_scope": "span_within_subsection",
         "required": False,
         "flag_prominently": False,
         "variants": [
@@ -608,6 +622,9 @@ SLOTS = [
         "slot_key": "DG-006b",
         "name": "Cost sharing type: in-kind contributions",
         "slot_type": "fixed",
+        # A bullet under "Types of cost sharing," not its own heading -
+        # never whole_subsection.
+        "match_scope": "span_within_subsection",
         "required": False,
         "flag_prominently": False,
         "variants": [
@@ -642,7 +659,8 @@ SLOTS = [
     },
     {
         "slot_key": "DG-009",
-        "name": "Indirect costs, Standard rate methods",
+        # See DG-008 - shares the real heading text "Indirect costs".
+        "name": "Indirect costs",
         "slot_type": "fixed",
         "required": False,  # optional per the template's own instruction
         "flag_prominently": False,
@@ -663,7 +681,8 @@ SLOTS = [
     },
     {
         "slot_key": "DG-010",
-        "name": "Indirect costs, Training awards",
+        # See DG-008 - shares the real heading text "Indirect costs".
+        "name": "Indirect costs",
         "slot_type": "fixed",
         "required": False,
         "flag_prominently": False,
@@ -681,7 +700,8 @@ SLOTS = [
     },
     {
         "slot_key": "DG-011",
-        "name": "Indirect costs, Foreign entity awards",
+        # See DG-008 - shares the real heading text "Indirect costs".
+        "name": "Indirect costs",
         "slot_type": "fixed",
         "required": False,
         "flag_prominently": False,
@@ -1134,7 +1154,8 @@ SLOTS = [
     },
     {
         "slot_key": "DG-043",
-        "name": "Unallowable costs, fixed framing",
+        # "Unallowable costs" is the real heading text.
+        "name": "Unallowable costs",
         "slot_type": "fixed_with_placeholders",
         "required": False,
         "flag_prominently": False,
